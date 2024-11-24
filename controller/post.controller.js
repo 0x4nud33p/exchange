@@ -36,4 +36,42 @@ const getPosts = async (req, res) => {
   }
 };
 
-export { createPost, getPosts };
+const getPaginatedPosts = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  try {
+    
+    const skip = (page - 1) * limit;
+
+   
+    const posts = await Post.find()
+      .skip(skip) 
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    
+    const totalPosts = await Post.countDocuments();
+
+    const totalPages = Math.ceil(totalPosts / limit);
+
+    res.status(200).json({
+      success: true,
+      data: posts,
+      metadata: {
+        currentPage: page,
+        totalPages,
+        totalPosts,
+        limit,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching posts",
+      error: error.message,
+    });
+  }
+};
+
+export { createPost, getPosts, getPaginatedPosts};

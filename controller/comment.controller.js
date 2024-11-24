@@ -1,7 +1,7 @@
 import { Comment } from "../models/comment.model.js";
 import { Post } from "../models/post.model.js";
 
-export const addComment = async (req, res) => {
+const addComment = async (req, res) => {
   const { text, postId } = req.body;
   const userId = req.user.userId;
 
@@ -26,3 +26,5 @@ export const addComment = async (req, res) => {
       .json({ message: "Error adding comment", error: error.message });
   }
 };
+
+export { addComment }

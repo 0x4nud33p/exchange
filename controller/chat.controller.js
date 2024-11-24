@@ -1,7 +1,7 @@
 import { Chat } from "../models/chat.model.js";
 import mongoose from "mongoose";
 
-export const saveMessage = async (req, res) => {
+const saveMessage = async (req, res) => {
   const { senderId, recipientId, message } = req.body;
 
   try {
@@ -16,7 +16,7 @@ export const saveMessage = async (req, res) => {
   }
 };
 
-export const getMessages = async (req, res) => {
+const getMessages = async (req, res) => {
   const { senderId, recipientId } = req.body;
  
   if (!senderId || !recipientId) {
@@ -47,3 +47,6 @@ export const getMessages = async (req, res) => {
       .json({ message: "Error fetching messages", error: error.message });
   }
 };
+
+
+export { saveMessage, getMessages };
