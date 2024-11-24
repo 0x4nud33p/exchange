@@ -1,6 +1,6 @@
 # Social Media App API
 
-A Backend API for a social media platform that allows user authentication, post creation, comment management, and real-time chat with notifications. Built using the **MERN stack** with **Socket.io** for real-time functionality.
+A Backend API for a social media platform that allows user authentication, post creation, comment management, and real-time chat with notifications. Built using the **node.js express mongodb** with **Socket.io** for real-time functionality.
 
 ---
 
