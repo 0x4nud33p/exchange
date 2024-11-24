@@ -254,7 +254,7 @@ A **backend API** for a social media platform developed using the **Node.js stac
 ## **Deployment**
 
 The project has been deployed to a cloud platform for production readiness.  
-- **Live Demo**: (https://social-media-api-b2i6.onrender.com)(#)
+- **Live Demo**: https://social-media-api-b2i6.onrender.com
 
 ---
 
