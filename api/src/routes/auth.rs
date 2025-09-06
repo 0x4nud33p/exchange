@@ -2,10 +2,12 @@ use actix_web::{web, HttpResponse};
 use diesel::prelude::*;
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
-use crate::db::{DbPool, models::{User, NewUser}, schema::users::dsl::*};
 use bcrypt::{hash, verify};
 use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, errors::Error as JwtError};
 use std::env;
+use db::DbPool;
+use db::models::{User, NewUser};
+use db::schema::users::dsl::*;
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -43,7 +45,7 @@ fn verify_jwt(token: &str) -> Result<Claims, JwtError> {
 }
 
 async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> HttpResponse {
-    let conn = match pool.get() {
+    let mut conn = match pool.get() {
         Ok(c) => c,
         Err(_) => return HttpResponse::InternalServerError().body("DB connection error"),
     };
@@ -57,7 +59,7 @@ async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> H
 
     let inserted: Result<User, _> = diesel::insert_into(users)
         .values(&new_user)
-        .get_result(&conn);
+        .get_result(&mut conn);
 
     match inserted {
         Ok(user) => {
@@ -72,13 +74,13 @@ async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> H
 }
 
 async fn login(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> HttpResponse {
-    let conn = match pool.get() {
+    let mut conn = match pool.get() {
         Ok(c) => c,
         Err(_) => return HttpResponse::InternalServerError().body("DB connection error"),
     };
 
     let user = users.filter(username.eq(&req.username))
-        .first::<User>(&conn);
+        .first::<User>(&mut conn);
 
     match user {
         Ok(u) => {

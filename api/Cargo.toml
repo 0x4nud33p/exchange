@@ -16,3 +16,4 @@ serde_json = "1.0.143"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4", "serde"] }
+db = { path = "../db" }

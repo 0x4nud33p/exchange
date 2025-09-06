@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::NaiveDateTime;
+use diesel::{Queryable, Insertable};
 
 #[derive(Queryable, Serialize)]
 pub struct User {
@@ -15,15 +16,4 @@ pub struct User {
 pub struct NewUser {
     pub username: String,
     pub password_hash: String,
-}
-
-#[derive(Insertable, Deserialize)]
-#[diesel(table_name = crate::schema::orders)]
-pub struct NewOrder {
-    pub user_id: Uuid,
-    pub symbol: String,
-    pub side: String,
-    pub order_type: String,
-    pub price: Option<bigdecimal::BigDecimal>,
-    pub quantity: bigdecimal::BigDecimal,
 }

@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-diesel = { version = "2.2.4", features = ["postgres", "r2d2", "chrono", "uuid"] }
+diesel = { version = "2.2.4", features = ["postgres", "r2d2", "chrono", "uuid", "numeric"] }
 dotenvy = "0.15"
 serde = { version = "1", features = ["derive"] }
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+bigdecimal = { version = "0.4", features = ["serde"] }

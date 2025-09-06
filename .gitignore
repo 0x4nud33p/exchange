@@ -10,6 +10,10 @@ db/target/
 ws/target/
 engine/target/
 
+api/.env
+db/.env
+ws/.env
+engine/.env
 
 # Cargo package files
 Cargo.lock
