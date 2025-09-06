@@ -1,0 +1,36 @@
+# Rust build
+/target/
+**/*.rs.bk
+
+**/target/*
+**/target/**
+
+api/target/
+db/target/
+ws/target/
+engine/target/
+
+
+# Cargo package files
+Cargo.lock
+
+# IDE files
+.idea/
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Byebug command history
+.byebug_history
+
+# Misc
+*.tgz
+*.zip
+
+# Coverage
+coverage/
