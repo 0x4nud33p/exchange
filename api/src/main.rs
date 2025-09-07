@@ -2,6 +2,7 @@ use actix_web::{App, HttpResponse, HttpServer, Responder, web};
 use db::establish_pool;
 use tracing_subscriber;
 
+mod middlewares;
 mod routes;
 mod utils;
 

@@ -1,4 +1,5 @@
-use crate::utils::jwt::{create_jwt, verify_jwt};
+use crate::middlewares::auth::Auth;
+use crate::utils::jwt::{create_jwt};
 use actix_web::{HttpResponse, web};
 use bcrypt::{hash, verify};
 use db::DbPool;
@@ -8,6 +9,7 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 use uuid::Uuid;
+use actix_web::HttpMessage;
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -93,19 +95,13 @@ async fn login(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> Http
 
 async fn me(req: actix_web::HttpRequest) -> HttpResponse {
     info!("Me request received");
-    let auth_header = req.headers().get("Authorization");
-    if auth_header.is_none() {
-        return HttpResponse::Unauthorized().finish();
-    }
 
-    let token = auth_header
-        .unwrap()
-        .to_str()
-        .unwrap_or("")
-        .replace("Bearer ", "");
-    match verify_jwt(&token) {
-        Ok(claims) => HttpResponse::Ok().json(serde_json::json!({ "user_id": claims.sub })),
-        Err(_) => HttpResponse::Unauthorized().finish(),
+    if let Some(claims) = req.extensions().get::<crate::utils::jwt::Claims>() {
+        HttpResponse::Ok().json(serde_json::json!({
+            "user_id": claims.sub
+        }))
+    } else {
+        HttpResponse::Unauthorized().finish()
     }
 }
 
@@ -114,6 +110,6 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         web::scope("/auth")
             .route("/register", web::post().to(register))
             .route("/login", web::post().to(login))
-            .route("/me", web::get().to(me)),
+            .service(web::scope("").wrap(Auth).route("/me", web::get().to(me))),
     );
 }
