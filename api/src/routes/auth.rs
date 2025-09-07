@@ -1,13 +1,13 @@
-use actix_web::{web, HttpResponse};
-use diesel::prelude::*;
-use uuid::Uuid;
-use serde::{Deserialize, Serialize};
+use crate::utils::jwt::{create_jwt, verify_jwt};
+use actix_web::{HttpResponse, web};
 use bcrypt::{hash, verify};
-use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, errors::Error as JwtError};
-use std::env;
 use db::DbPool;
-use db::models::{User, NewUser};
+use db::models::{NewUser, User};
 use db::schema::users::dsl::*;
+use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
+use tracing::{error, info, warn};
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -21,30 +21,8 @@ pub struct AuthResponse {
     pub token: String,
 }
 
-#[derive(Serialize, Deserialize)]
-struct Claims {
-    pub sub: Uuid,
-    pub exp: usize,
-}
-
-fn create_jwt(user_id: Uuid) -> Result<String, JwtError> {
-    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "secret".into());
-    let expiration = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::hours(24))
-        .expect("valid timestamp")
-        .timestamp() as usize;
-
-    let claims = Claims { sub: user_id, exp: expiration };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref()))
-}
-
-fn verify_jwt(token: &str) -> Result<Claims, JwtError> {
-    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "secret".into());
-    decode::<Claims>(token, &DecodingKey::from_secret(secret.as_ref()), &Validation::default())
-        .map(|data| data.claims)
-}
-
 async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> HttpResponse {
+    info!("Register attempt for username: {}", req.username);
     let mut conn = match pool.get() {
         Ok(c) => c,
         Err(_) => return HttpResponse::InternalServerError().body("DB connection error"),
@@ -63,45 +41,68 @@ async fn register(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> H
 
     match inserted {
         Ok(user) => {
+            info!("✅ User registered: {}", user.username);
             let token = create_jwt(user.id).unwrap_or_default();
-            HttpResponse::Ok().json(AuthResponse { user_id: user.id, token })
-        },
-        Err(diesel::result::Error::DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _)) => {
+            HttpResponse::Ok().json(AuthResponse {
+                user_id: user.id,
+                token,
+            })
+        }
+        Err(diesel::result::Error::DatabaseError(
+            diesel::result::DatabaseErrorKind::UniqueViolation,
+            _,
+        )) => {
+            warn!("User registration failed: {}", req.username);
             HttpResponse::Conflict().body("User already exists")
-        },
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        }
+        Err(_) => {
+            error!("User registration failed: {}", req.username);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
 
 async fn login(pool: web::Data<DbPool>, req: web::Json<RegisterRequest>) -> HttpResponse {
+    info!("Login attempt for username: {}", req.username);
     let mut conn = match pool.get() {
         Ok(c) => c,
         Err(_) => return HttpResponse::InternalServerError().body("DB connection error"),
     };
 
-    let user = users.filter(username.eq(&req.username))
+    let user = users
+        .filter(username.eq(&req.username))
         .first::<User>(&mut conn);
 
     match user {
         Ok(u) => {
             if verify(&req.password, &u.password_hash).unwrap_or(false) {
+                info!("✅ User logged in: {}", u.username);
                 let token = create_jwt(u.id).unwrap_or_default();
-                HttpResponse::Ok().json(AuthResponse { user_id: u.id, token })
+                HttpResponse::Ok().json(AuthResponse {
+                    user_id: u.id,
+                    token,
+                })
             } else {
+                warn!("User login failed: {}", req.username);
                 HttpResponse::Unauthorized().body("Invalid credentials")
             }
-        },
+        }
         Err(_) => HttpResponse::Unauthorized().body("Invalid credentials"),
     }
 }
 
 async fn me(req: actix_web::HttpRequest) -> HttpResponse {
+    info!("Me request received");
     let auth_header = req.headers().get("Authorization");
     if auth_header.is_none() {
         return HttpResponse::Unauthorized().finish();
     }
 
-    let token = auth_header.unwrap().to_str().unwrap_or("").replace("Bearer ", "");
+    let token = auth_header
+        .unwrap()
+        .to_str()
+        .unwrap_or("")
+        .replace("Bearer ", "");
     match verify_jwt(&token) {
         Ok(claims) => HttpResponse::Ok().json(serde_json::json!({ "user_id": claims.sub })),
         Err(_) => HttpResponse::Unauthorized().finish(),
